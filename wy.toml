@@ -1,0 +1,7 @@
+[package]
+name="gif"
+authors=["David J. Pearce","Other Person"]
+version="0.1.0"
+
+[dependencies]
+std="0.2.5"
