@@ -2,18 +2,19 @@ package gif
 
 import u8 from std::integer
 import u16 from std::integer
+import std::ascii
 
 import Image
 import RGBA
 
 // A colour in a GIF file is an unsigned integer between 0..255.
-public define Colour as {
+public type Colour is {
     u8 red,
     u8 green,
     u8 blue
 }
 
-public Colour Colour(int red, int green, int blue):
+public function Colour(int red, int green, int blue) -> Color:
     return {
         red: red, 
         green: green,
@@ -22,11 +23,11 @@ public Colour Colour(int red, int green, int blue):
 
 // Colour maps are an optional assignment of colour indices to rgb
 // values.
-define ColourMap as [Colour]|null
+type ColourMap is Colour[]|null
 
 // Defines standard magic numbersx
-define GIF87a_MAGIC as "GIF87a"
-define GIF89a_MAGIC as "GIF89a"
+final ascii::string GIF87a_MAGIC as "GIF87a"
+final ascii::string GIF89a_MAGIC as "GIF89a"
 
 // A GIF file
 public define GIF as {
