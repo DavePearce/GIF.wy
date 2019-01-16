@@ -1,5 +1,7 @@
 package gif
 
+import std::integer
+
 public type Reader is {
     int index,  // index of current byte in data
     int end,    // current end of block
@@ -8,7 +10,7 @@ public type Reader is {
 }
 
 public function Reader(byte[] data, int start) -> Reader:
-    end = Byte.toUnsignedInt(data[start])
+    int end = integer::toUnsignedInt(data[start])
     return {
         index: start+1,
         end: start+1+end,
@@ -16,20 +18,20 @@ public function Reader(byte[] data, int start) -> Reader:
         data: data
     }
 
-public function read(Reader reader) -> (bool b, Reader r) :
-    boff = reader.boff
+public function read(Reader reader) -> (bool f, Reader r) :
+    int boff = reader.boff
     // first, read the current bit
-    b = reader.data[reader.index]
+    byte b = reader.data[reader.index]
     b = b >> boff
     b = b & 0b00000001
     // now, move position to next bit
     boff = boff + 1
     if boff == 8:
         reader.boff = 0
-        index = reader.index + 1
+        int index = reader.index + 1
         if index == reader.end:
             // need to roll over to next block
-            end = Byte.toUnsignedInt(reader.data[index])
+            int end = integer::toUnsignedInt(reader.data[index])
             index = index + 1
             reader.end = index + end
         reader.index = index
@@ -38,11 +40,12 @@ public function read(Reader reader) -> (bool b, Reader r) :
     // return the bit we've read
     return b == 0b00000001,reader
 
-public function read(Reader reader, int nbits) -> (byte b, Reader r)
+public function read(Reader reader, int nbits) -> (byte b, Reader rp)
 requires nbits >= 0 && nbits < 8:
-    mask = 0b00000001
-    r = 0b
+    byte mask = 0b00000001
+    byte r = 0b
     int i = 0
+    bool bit
     while i < nbits:
         bit,reader = read(reader)
         if bit:
@@ -51,10 +54,12 @@ requires nbits >= 0 && nbits < 8:
         i = i + 1
     return r,reader
 
-public function readUnsignedInt(Reader reader, int nbits) -> (int count, Reader r):
-    base = 1
-    r = 0
+public function read_uint(Reader reader, int nbits) -> (int count, Reader rp):
+    int base = 1
+    int r = 0
     int i = 0
+    bool bit
+    //
     while i < nbits:
         bit,reader = read(reader)
         if bit:
@@ -78,13 +83,13 @@ public function Writer() -> Writer:
 
 public function write(Writer writer, bool bit) -> Writer:
     // first, check there's enough space
-    index = writer.index
-    boff = writer.boff
+    int index = writer.index
+    int boff = writer.boff
     if index >= |writer.data|:
-        writer.data = writer.data + [0b00000000]
+        writer.data = resize(writer.data,|writer.data|*2,0b00000000)
     // second, write the bit out
     if bit:
-        mask = 0b00000001 << boff
+        byte mask = 0b00000001 << boff
         writer.data[index] = writer.data[index] | mask
     // third, update offsets
     boff = boff + 1
@@ -95,3 +100,32 @@ public function write(Writer writer, bool bit) -> Writer:
         writer.boff = boff
     // done!
     return writer
+
+// ============================================================
+// FIXME: this should be in the standard library!
+// ============================================================
+
+// Resize an array to a given size
+public function resize(byte[] items, int size, byte element) -> (byte[] result)
+// Required size cannot be negative
+requires size >= 0
+// Returned array is of specified size
+ensures |result| == size
+// If array is enlarged, the all elements up to new size match
+ensures all { i in 0 .. |items| | i >= size || result[i] == items[i] }
+// All new elements match given element
+ensures all { i in |items| .. size | result[i] == element}:
+    //
+    byte[] nitems = [element; size]
+    int i = 0
+    while i < size && i < |items|
+    where i >= 0 && |nitems| == size
+    // All elements up to i match as before
+    where all { j in 0..i | nitems[j] == items[j] }
+    // All elements about size match element
+    where all { j in |items| .. size | nitems[j] == element}:
+        //
+        nitems[i] = items[i]
+        i = i + 1
+    //
+    return nitems

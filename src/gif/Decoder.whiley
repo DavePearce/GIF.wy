@@ -1,20 +1,15 @@
 package gif
 
-public GIF decode([byte] data) throws Error:
-    pos = 0
+import std::ascii
 
+public function decode(byte[] data) -> (null|GIF r):
     // ===============================================
     // GIF SIGNATURE
-    // ===============================================
-
-    magic = ""
-    for i in 0..6:
-        i = Byte.toUnsignedInt(data[pos])
-        pos = pos + 1
-        magic = magic + (char)i
-    // check magic number seems sensible
-    if magic[0..3] != "GIF":
-        throw Error("invalid magic number - " + magic)
+    // ===============================================    
+    ascii::string magic = decode_magic(data)
+    // Check whether magic valid 
+    if |magic| < 6 || magic[0] != 'G' || magic[1] != 'I' || magic[2] != 'F':
+        return null
 
     // ===============================================
     // SCREEN DESCRIPTOR
@@ -38,17 +33,15 @@ public GIF decode([byte] data) throws Error:
     // +---------------+
     //
     // ===============================================
-
     // read logical screen resolution
-    width = Byte.toUnsignedInt(data[pos..pos+2])
-    pos = pos + 2
-    height = Byte.toUnsignedInt(data[pos..pos+2])
-    pos = pos + 2
+    int width = integer::toUnsignedInt([data[6],data[7]])
+    int height = integer::toUnsignedInt([data[8],data[9]])
     // read packed data
+    int pos = 10    
     packed = data[pos]
-    bitsPerPixel = Byte.toUnsignedInt(packed & 111b) + 1
-    bitsOfColourResolution = Byte.toUnsignedInt((packed & 01110000b) >> 4)
-    hasGlobalMap = (packed & 10000000b) != 0b
+    bitsPerPixel = Byte.toUnsignedInt(packed & 0b111) + 1
+    bitsOfColourResolution = Byte.toUnsignedInt((packed & 0b01110000) >> 4)
+    hasGlobalMap = (packed & 0b10000000) != 0b0
     pos = pos + 1
     // read background colour index
     background = Byte.toUnsignedInt(data[pos])
@@ -68,21 +61,22 @@ public GIF decode([byte] data) throws Error:
     // ===============================================
     // CONTENTS
     // ===============================================
-    images = []
-    extensions = []
+    ImageDescriptor[] images = []
+    //extensions = []
     while true:
         lookahead = data[pos]
         pos = pos + 1
         switch lookahead:
-            case 0010000b:
+            case 0b0010000:
                 // GIF Extension Block
-                extension,pos = readExtensionBlock(data,pos)
-                extensions = extensions + [extension]
-            case 00101100b:
+                // extension,pos = read_extension_block(data,pos)
+                // extensions = extensions + [extension]
+                return null // FIXME!
+            case 0b00101100:
                 // Image Descriptor
-                image,pos = readImageDescriptor(data,pos)
-                images = images + [image]
-            case 00111011b:
+                image,pos = read_image_descriptor(data,pos)
+                images = append(images,image)
+            case 0b00111011:
                 // Terminator
                 break
     // done
@@ -95,6 +89,17 @@ public GIF decode([byte] data) throws Error:
         images: images,
         extensions: extensions
     }
+
+function decode_magic(byte[] data) -> (ascii::string r):
+    int len = std::min(6,|data|)
+    // Copy magic number out of data array
+    ascii::string[] magic = [0;len]
+    int i = 0
+    while i < len:
+        magic[i] = data[i]
+        i = i + 1
+    //
+    return magic
 
 // GIF EXTENSION BLOCK
 //
@@ -130,20 +135,14 @@ public GIF decode([byte] data) throws Error:
 // code.  This ensures that older decoders will be able to process extended
 // GIF image	 files	 in  the  future,  though  without  the  additional
 // functionality.
-(Extension,int) readExtensionBlock([byte] data, int pos):
-    code = Byte.toUnsignedInt(data[pos])
-    pos = pos + 1
-    count = Byte.toUnsignedInt(data[pos])
-    pos = pos + 1
-    bytes = []
-    while count != 0:
-        start = pos
-        pos = pos + count
-        bytes = bytes + data[pos .. pos]
-        count = Byte.toUnsignedInt(data[pos])
+function read_extension_block(byte[] data, int pos) -> (Extension e, int ppos):
+    u8 code = Byte.toUnsignedInt(data[pos])
+    //
+    // TODO: fixme
+    //
     return {
         code: code,
-        data: bytes
+        data: []
     },pos
 
 // IMAGE DESCRIPTOR
@@ -220,21 +219,21 @@ public GIF decode([byte] data) throws Error:
 // writes every 4th row starting at the third row from the top.  The fourth
 // pass completes the image, writing  every  other  row,  starting  at	the
 // second row from the top. 
-(ImageDescriptor,int) readImageDescriptor([byte] data, int pos) throws Error:
+function read_image_descriptor(byte[] data, int pos) -> (ImageDescriptor img, int ppos):
     // read image dimensions
-    left = Byte.toUnsignedInt(data[pos..pos+2])
+    left = integer::toUnsignedInt([data[pos],data[pos+1]])
     pos = pos + 2
-    top = Byte.toUnsignedInt(data[pos..pos+2])
+    top = integer::toUnsignedInt([data[pos],data[pos+1]])
     pos = pos + 2
-    width = Byte.toUnsignedInt(data[pos..pos+2])
+    width = integer::toUnsignedInt([data[pos],data[pos+1]])
     pos = pos + 2
-    height = Byte.toUnsignedInt(data[pos..pos+2])
+    height = integer::toUnsignedInt([data[pos],data[pos+1]])
     pos = pos + 2
     // read packed data
     packed = data[pos]
-    bitsPerPixel = Byte.toUnsignedInt(packed & 111b) + 1  
-    interlaced = (packed & 01000000b) != 0b
-    hasLocalMap = (packed & 10000000b) != 0b
+    bitsPerPixel = Byte.toUnsignedInt(packed & 0b111b) + 1  
+    interlaced = (packed & 0b01000000) != 0b
+    hasLocalMap = (packed & 0b10000000) != 0b
     pos = pos + 1
     // read local colour map
     if hasLocalMap:

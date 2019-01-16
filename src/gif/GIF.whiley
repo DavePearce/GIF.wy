@@ -2,7 +2,7 @@ package gif
 
 import u8 from std::integer
 import u16 from std::integer
-import std::ascii
+import string from std::ascii
 
 import Image
 import RGBA
@@ -14,7 +14,7 @@ public type Colour is {
     u8 blue
 }
 
-public function Colour(int red, int green, int blue) -> Color:
+public function Colour(int red, int green, int blue) -> Colour:
     return {
         red: red, 
         green: green,
@@ -26,23 +26,25 @@ public function Colour(int red, int green, int blue) -> Color:
 type ColourMap is Colour[]|null
 
 // Defines standard magic numbersx
-final ascii::string GIF87a_MAGIC as "GIF87a"
-final ascii::string GIF89a_MAGIC as "GIF89a"
+final string GIF87a_MAGIC = "GIF87a"
+final string GIF89a_MAGIC = "GIF89a"
 
 // A GIF file
-public define GIF as {
+public type GIF is {
     string magic,
     u16 width,  // screen width
     u16 height, // screen height
     u8 background, // index of background colour
     ColourMap colourMap,
-    [ImageDescriptor] images,
-    [Extension] extensions
+    ImageDescriptor[] images,
+    Extension[] extensions
 }
 
 // Construct a GIF file with the given attributes
-public GIF GIF(string magic, u16 width, u16 height, u8 background, 
-            ColourMap colourMap, [ImageDescriptor] images, [Extension] extensions):
+public function GIF(string magic, u16 width, u16 height,
+    u8 background, ColourMap colourMap, ImageDescriptor[] images,
+    Extension[] extensions) -> GIF:
+    //
     return {
         magic: magic,
         width: width,
@@ -54,24 +56,26 @@ public GIF GIF(string magic, u16 width, u16 height, u8 background,
     }
 
 // Decode a GIF file from a give list of bytes
-public GIF decode([byte] bytes) throws Error:
+
+/*
+public function decode(byte[] bytes) -> GIF:
     return Decoder.decode(bytes)
-    
+*/
 
 // An image descriptor within a GIF file
-public define ImageDescriptor as {
+public type ImageDescriptor is {
     u16 left,
     u16 top,
     u16 width,
     u16 height,
     bool interlaced,
     ColourMap colourMap,
-    [int] data
+    int[] data
 }
 
 // Construct a GIF image with the given attributes.
-public ImageDescriptor ImageDescriptor(u16 left, u16 top, u16 width, u16 height, bool interlaced, 
-                ColourMap colourMap, [int] data):
+public function ImageDescriptor(u16 left, u16 top, u16 width, u16 height,
+        bool interlaced, ColourMap colourMap, int[] data) -> ImageDescriptor:
     return {
         left: left,
         top: top,
@@ -82,12 +86,13 @@ public ImageDescriptor ImageDescriptor(u16 left, u16 top, u16 width, u16 height,
         data: data
     }
 
-public define Extension as {
+public type Extension is {
     int code,
-    [byte] data
+    byte[] data
 }
 
-public Image toImage(GIF gif, ImageDescriptor img) throws {string msg}:
+/*
+public function toImage(GIF gif, ImageDescriptor img) -> Image:
     colourMap = img.colourMap
     if colourMap == null:
         colourMap = gif.colourMap
@@ -105,3 +110,4 @@ public Image toImage(GIF gif, ImageDescriptor img) throws {string msg}:
         height: img.height,
         data: data
     }
+*/
